@@ -31,9 +31,7 @@ unzip data_project_poker.zip
 
 ### constructed card dataset
 
-- Tcards.npy:<https://drive.google.com/file/d/1eVEAf7qZaTpfqygPjPsCIT5nNrsKcMk7/view>
-
-
+- Tcards.npy: <https://drive.google.com/file/d/1eVEAf7qZaTpfqygPjPsCIT5nNrsKcMk7/view>
 
 ### structure
 
