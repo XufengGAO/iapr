@@ -16,7 +16,7 @@ def HSV_range(chip_type):
         upper1 = np.array([95, 255, 188])
 
     elif chip_type == "CB":
-        lower1 = np.array([99, 100, 120])
+        lower1 = np.array([99, 100, 90])
         upper1 = np.array([160, 255, 242])
 
     elif chip_type == "CW":
@@ -107,7 +107,7 @@ def getChipRes(
         )
 
         # if with coins
-        if np.sum(full_mask == 255) > 40000:
+        if np.sum(full_mask == 255) > 38000:
             chip_fake_binary, sure_fg, dist_transform, contours = RGB_chip_identify(
                 chip_im, use_full_mask=True, full_mask=full_mask
             )
@@ -188,40 +188,57 @@ def getChipRes(
         lower_mask = cv.inRange(image, lower1, upper1)
         full_mask = lower_mask
 
-        # give fake images
-        # chip_fake_im = copy.deepcopy(table[1000:2800, 2200:3900])
-        # chip_fake_im[np.where(full_mask == 255)] = chip_im[np.where(full_mask == 255)]
+        # if with coins
+        if np.sum(full_mask == 255) > 38000:
+            kernelClose = np.ones((3, 4), np.uint8)
+            opening = cv.morphologyEx(full_mask, cv.MORPH_OPEN, (5, 5), iterations=2)
+            closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernelClose, iterations=1)
 
-        kernelClose = np.ones((3, 4), np.uint8)
-        opening = cv.morphologyEx(full_mask, cv.MORPH_OPEN, (5, 5), iterations=2)
-        closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, kernelClose, iterations=1)
-
-        dist_transform = cv.distanceTransform(closing, cv.DIST_L2, 5)
-        ret, sure_fg = cv.threshold(
-            dist_transform, 0.4 * dist_transform.max(), 255, cv.THRESH_BINARY
-        )
-        sure_fg = np.uint8(sure_fg)
-
-        contours, _ = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-
-        if debug:
-            plotMultipleImages(
-                1,
-                5,
-                [chip_im, full_mask, closing, dist_transform, sure_fg],
-                [
-                    'ori imag',
-                    'full_mask {}'.format(np.sum(full_mask == 255)),
-                    'closing',
-                    'dist_transform',
-                    'sure_fg{}'.format(img_id),
-                ],
-                ['rgb', 'gray', 'gray', 'gray', 'gray'],
-                (20, 20),
+            dist_transform = cv.distanceTransform(closing, cv.DIST_L2, 5)
+            ret, sure_fg = cv.threshold(
+                dist_transform, 0.4 * dist_transform.max(), 255, cv.THRESH_BINARY
             )
+            sure_fg = np.uint8(sure_fg)
 
+            contours, _ = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+            if debug:
+                plotMultipleImages(
+                    1,
+                    5,
+                    [chip_im, full_mask, binary, dist_transform, sure_fg],
+                    [
+                        'ori imag',
+                        'full_mask {}'.format(np.sum(full_mask == 255)),
+                        'binary',
+                        'dist_transform',
+                        'sure_fg{}'.format(img_id),
+                    ],
+                    ['rgb', 'gray', 'gray', 'gray', 'gray'],
+                    (20, 20),
+                )
+
+        else:
+            # if no chips
+            contours = []
+
+            if debug:
+                plotMultipleImages(
+                    1,
+                    2,
+                    [chip_im, full_mask],
+                    [
+                        'ori imag',
+                        'full_mask {}'.format(np.sum(full_mask == 255)),
+                    ],
+                    ['rgb', 'gray'],
+                    (10, 10),
+                )
+
+        # count_areas = []
         for contour in contours:
             if cv.contourArea(contour) > 3800:
+                # count_areas.append(cv.contourArea(contour))
                 chip_results[chip_type] += 1
 
     if viz_res:
