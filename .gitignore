@@ -267,3 +267,4 @@ dmypy.json
 # project data 2022 Spring
 project/data
 project/data_project_poker.zip
+project/*.json
