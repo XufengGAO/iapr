@@ -26,12 +26,12 @@ def HSV_range(chip_type):
     return lower1, upper1
 
 
-def RGB_chip_identify(chip_im, use_full_mask=False, full_mask=None):
+def RGB_chip_identify(img_chip, use_full_mask=False, full_mask=None):
     """
     function to identify position of chips
     """
-    h, w, ch = chip_im.shape
-    gray = cv.cvtColor(chip_im, cv.COLOR_RGB2GRAY)  # rgb to gray
+    h, w, ch = img_chip.shape
+    gray = cv.cvtColor(img_chip, cv.COLOR_RGB2GRAY)  # rgb to gray
     gray = cv.GaussianBlur(gray, (21, 21), 1)
     ret, binary = cv.threshold(
         gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU
@@ -56,13 +56,13 @@ def RGB_chip_identify(chip_im, use_full_mask=False, full_mask=None):
     )
     sure_fg = np.uint8(sure_fg)
 
-    # plotMultipleImages(1, 3, [chip_im, binary, sure_fg], ['chip_im', 'binary {}'.format(np.sum(chip_fake_binary == 255)), 'sure_fg', ], ['rgb',  'gray', 'gray'], (15,15))
+    # plotMultipleImages(1, 3, [img_chip, binary, sure_fg], ['img_chip', 'binary {}'.format(np.sum(chip_fake_binary == 255)), 'sure_fg', ], ['rgb',  'gray', 'gray'], (15,15))
     contours, _ = cv.findContours(sure_fg, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     return chip_fake_binary, sure_fg, dist_transform, contours
 
 
 def getChipRes(
-    chip_im: np.array,
+    img_chip: np.array,
     img_id: int,
     viz_res=False,
     debug=False,
@@ -71,7 +71,7 @@ def getChipRes(
     # results init
     chip_results = {"CR": 0, "CG": 0, "CB": 0, "CK": 0, "CW": 0}
 
-    gray = cv.cvtColor(chip_im, cv.COLOR_RGB2GRAY)  # rgb to gray
+    gray = cv.cvtColor(img_chip, cv.COLOR_RGB2GRAY)  # rgb to gray
     gray = cv.GaussianBlur(gray, (21, 21), 1)
     ret, binary = cv.threshold(
         gray, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU
@@ -83,7 +83,7 @@ def getChipRes(
 
     # first process RGB chips
     for chip_type in ["CR", "CG", "CB"]:
-        image = cv.cvtColor(chip_im, cv.COLOR_RGB2HSV)
+        image = cv.cvtColor(img_chip, cv.COLOR_RGB2HSV)
         lower1, upper1 = HSV_range(chip_type)
         lower_mask = cv.inRange(image, lower1, upper1)
 
@@ -98,7 +98,7 @@ def getChipRes(
 
         # give fake images
         # chip_fake_im = copy.deepcopy(table[1000:2800, 2200:3900])
-        # chip_fake_im[np.where(full_mask == 255)] = chip_im[np.where(full_mask == 255)]
+        # chip_fake_im[np.where(full_mask == 255)] = img_chip[np.where(full_mask == 255)]
 
         # give better masks
         kernelClose = np.ones((15, 15), np.uint8)
@@ -109,23 +109,23 @@ def getChipRes(
         # if with coins
         if np.sum(full_mask == 255) > 40000:
             chip_fake_binary, sure_fg, dist_transform, contours = RGB_chip_identify(
-                chip_im, use_full_mask=True, full_mask=full_mask
+                img_chip, use_full_mask=True, full_mask=full_mask
             )
 
             if debug:
                 plotMultipleImages(
                     1,
                     5,
-                    [chip_im, full_mask, binary, dist_transform, sure_fg],
-                    [
+                    images=[img_chip, full_mask, binary, dist_transform, sure_fg],
+                    titles=[
                         'ori imag',
                         'full_mask {}'.format(np.sum(full_mask == 255)),
                         'binary',
                         'dist_transform',
                         'sure_fg{}'.format(img_id),
                     ],
-                    ['rgb', 'gray', 'gray', 'gray', 'gray'],
-                    (20, 20),
+                    cmap=['rgb', 'gray', 'gray', 'gray', 'gray'],
+                    figsize=(20, 10),
                 )
 
         else:
@@ -136,13 +136,13 @@ def getChipRes(
                 plotMultipleImages(
                     1,
                     2,
-                    [chip_im, full_mask],
-                    [
+                    images=[img_chip, full_mask],
+                    titles=[
                         'ori imag',
                         'full_mask {}'.format(np.sum(full_mask == 255)),
                     ],
-                    ['rgb', 'gray'],
-                    (10, 10),
+                    cmap=['rgb', 'gray'],
+                    figsize=(10, 10),
                 )
 
         # count_areas = []
@@ -153,22 +153,22 @@ def getChipRes(
 
     for chip_type in ["CK"]:
         chip_fake_binary, sure_fg, dist_transform, contours = RGB_chip_identify(
-            chip_im, use_full_mask=False
+            img_chip, use_full_mask=False
         )
 
         if debug:
             plotMultipleImages(
                 1,
                 4,
-                [chip_im, chip_fake_binary, sure_fg, dist_transform],
-                [
+                images=[img_chip, chip_fake_binary, sure_fg, dist_transform],
+                titles=[
                     'ori imag',
                     'chip_fake_binary {}'.format(img_id),
                     'sure_fg {}'.format(img_id),
                     'dist_transform {}'.format(img_id),
                 ],
-                ['rgb', 'gray', 'gray', 'gray'],
-                (20, 20),
+                cmap=['rgb', 'gray', 'gray', 'gray'],
+                figsize=(20, 10),
             )
 
         total_chip = 0
@@ -183,14 +183,14 @@ def getChipRes(
         )
 
     for chip_type in ["CW"]:
-        image = cv.cvtColor(chip_im, cv.COLOR_RGB2HLS)
+        image = cv.cvtColor(img_chip, cv.COLOR_RGB2HLS)
         lower1, upper1 = HSV_range(chip_type)
         lower_mask = cv.inRange(image, lower1, upper1)
         full_mask = lower_mask
 
         # give fake images
         # chip_fake_im = copy.deepcopy(table[1000:2800, 2200:3900])
-        # chip_fake_im[np.where(full_mask == 255)] = chip_im[np.where(full_mask == 255)]
+        # chip_fake_im[np.where(full_mask == 255)] = img_chip[np.where(full_mask == 255)]
 
         kernelClose = np.ones((3, 4), np.uint8)
         opening = cv.morphologyEx(full_mask, cv.MORPH_OPEN, (5, 5), iterations=2)
@@ -208,16 +208,16 @@ def getChipRes(
             plotMultipleImages(
                 1,
                 5,
-                [chip_im, full_mask, closing, dist_transform, sure_fg],
-                [
+                images=[img_chip, full_mask, closing, dist_transform, sure_fg],
+                titles=[
                     'ori imag',
                     'full_mask {}'.format(np.sum(full_mask == 255)),
                     'closing',
                     'dist_transform',
                     'sure_fg{}'.format(img_id),
                 ],
-                ['rgb', 'gray', 'gray', 'gray', 'gray'],
-                (20, 20),
+                cmap=['rgb', 'gray', 'gray', 'gray', 'gray'],
+                figsize=(20, 10),
             )
 
         for contour in contours:
@@ -226,7 +226,7 @@ def getChipRes(
 
     if viz_res:
         _, ax = plt.subplots(figsize=(6, 6))
-        ax.imshow(chip_im)
+        ax.imshow(img_chip)
         ax.set_title('Img' + str(img_id) + str(chip_results).replace(" ", ""))
 
     return chip_results

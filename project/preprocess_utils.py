@@ -219,7 +219,7 @@ def cropTable(
     )
 
 
-PART_NAMES = ['P1', 'p2', 'p3', 'p4', 'T1-T5', 'CR-CW']
+PART_NAMES = ['p1', 'p2', 'p3', 'p4', 'T1-T5', 'CR-CW']
 
 
 def cropImgParts(

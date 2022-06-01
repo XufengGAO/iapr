@@ -1,4 +1,5 @@
 import copy
+import matplotlib
 import matplotlib.pyplot as plt
 from PIL import ImageDraw
 
@@ -21,8 +22,10 @@ def vizCropProcedures(imgs_debug, img_crop_origin, figsize=(20, 12), main_title=
         fig.suptitle(main_title)
 
 
-def plotMultipleImages(nrows, ncols, images, titles, cmap, fig_title=None):
-    fig = plt.figure(figsize=(14, 8))
+def plotMultipleImages(
+    nrows, ncols, images, titles, cmap, bold_axis=None, fig_title=None, figsize=(14, 8)
+):
+    fig = plt.figure(figsize=figsize)
     plt.axis('off')
     fig.subplots_adjust(hspace=0.4, wspace=0.3)
     for i in range(len(titles)):
@@ -34,6 +37,12 @@ def plotMultipleImages(nrows, ncols, images, titles, cmap, fig_title=None):
             ax.imshow(images[i])
         else:
             ax.imshow(images[i], cmap=cmap[i])
+        # set bold boundaries
+        if bold_axis is not None:
+            if bold_axis[i]:
+                for child in ax.get_children():
+                    if isinstance(child, matplotlib.spines.Spine):
+                        child.set(lw=5, color='red')
     if fig_title is not None:
         fig.suptitle(fig_title)
     plt.show()
