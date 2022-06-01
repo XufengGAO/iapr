@@ -1,8 +1,9 @@
 import copy
 import numpy as np
 import cv2 as cv
-import PIL.Image
-import matplotlib.pyplot as plt
+from PIL import Image
+
+from viz_utils import plotMultipleImages, plotBboxInPlace
 
 
 def getTableOrigin(table_corners: np.ndarray) -> np.ndarray:
@@ -172,7 +173,7 @@ def cropTable(
     rect_offset=40,
     debug=False,
 ):
-    img_origin_ = PIL.Image.open(file)
+    img_origin_ = Image.open(file)
     w, h = img_origin_.size
     # 800, 50 | 400, 20
     img_origin_crop = img_origin_.crop(
@@ -218,22 +219,41 @@ def cropTable(
     )
 
 
-def vizCropProcedures(imgs_debug, img_crop_origin, figsize=(20, 12), main_title=None):
-    fig, ax = plt.subplots(2, 3, figsize=figsize)
-    ax[0, 0].imshow(imgs_debug['img_binary'], cmap='gray')
-    ax[0, 0].set_title('img_binary')
-    ax[0, 1].imshow(imgs_debug['img_morph'], cmap='gray')
-    ax[0, 1].set_title('img_morph')
-    ax[0, 2].imshow(imgs_debug['img_dist_trans_thresh'], cmap='gray')
-    ax[0, 2].set_title('img_dist_trans_thresh')
-    ax[1, 0].imshow(imgs_debug['img_contour'], cmap='gray')
-    ax[1, 0].set_title('img_contour')
-    ax[1, 1].imshow(imgs_debug['img_origin_rect'])
-    ax[1, 1].set_title('img_origin_rect')
-    ax[1, 2].imshow(img_crop_origin)
-    ax[1, 2].set_title('img_crop_origin')
-    if main_title is not None:
-        fig.suptitle(main_title)
+PART_NAMES = ['P1', 'p2', 'p3', 'p4', 'T1-T5', 'CR-CW']
+
+
+def cropImgParts(
+    table_crop,
+    im_names=PART_NAMES,
+    fig_title=None,
+    viz_parts=False,
+    viz_inplace=False,
+):
+    # train_size = np.loadtxt(os.path.join(data_path, "train_size.txt")).astype(int)
+    # w1,h1 w2,h2
+    tables_crop_pil = Image.fromarray(table_crop)
+    w, h = tables_crop_pil.size
+
+    box_p1 = (w - 1101, 1000, w - 1, 2500)
+    box_p2 = (2000, 0, 3200, 1000)
+    box_p3 = (500, 0, 1700, 1000)
+    box_p4 = (0, 1000, 1100, 2500)
+
+    box_T = (500, 2700, 3250, h - 1)
+    box_C = (1000, 1000, 2600, 2600)
+    boxes = [box_p1, box_p2, box_p3, box_p4, box_T, box_C]
+    im_parts = []
+    for box in boxes:
+        im = tables_crop_pil.crop(box)
+        im_parts.append(im)
+
+    if viz_parts:
+        plotMultipleImages(
+            2, 3, im_parts, im_names, cmap=['rgb'] * 6, fig_title=fig_title
+        )
+    if viz_inplace:
+        plotBboxInPlace(tables_crop_pil, boxes, im_names, fig_title=fig_title)
+    return im_parts
 
 
 #%% deprecated cropping
@@ -297,6 +317,32 @@ def tableCutting(obj_img, im_morph):
     # plt.show()
     # return box[o_index]
     return rect, table_corners
+
+
+# Crop, currently only T label.
+def crop(o, im_origin, viz=True, fig_title=None):
+    # train_size = np.loadtxt(os.path.join(data_path, "train_size.txt")).astype(int)
+    # w1,h1,w2,h2，
+    box_p1 = (o[0] + 2600, o[1] + 1000, o[0] + 3760, o[1] + 2400)
+    box_p2 = (o[0] + 1750, o[1] - 50, o[0] + 3216, o[1] + 880)
+    box_p3 = (o[0] + 216, o[1] - 50, o[0] + 1700, o[1] + 880)
+    box_p4 = (o[0] - 50, o[1] + 1200, o[0] + 1000, o[1] + 2265)
+
+    box_T = (o[0], o[1] + 2601, o[0] + 3765, o[1] + 3765)
+    box_C = (o[0] + 660, o[1] + 865, o[0] + 2600, o[1] + 2465)
+    boxes = [box_p1, box_p2, box_p3, box_p4, box_T, box_C]
+    im_parts = []
+    for box in boxes:
+        im = im_origin.crop(box)
+        im_parts.append(im)
+    # train_ims_crop = []
+    # train_ims_crop.append(ims)
+    im_names = ['P1', 'p2', 'p3', 'p4', 'T1-T5', 'CR-CW']
+    if viz:
+        plotMultipleImages(
+            1, 6, im_parts, im_names, cmap=['rgb'] * 6, fig_title=fig_title
+        )
+    return im_parts
 
 
 #%% deprecated utilities
