@@ -18,6 +18,12 @@
 [l02_nbviewer]: https://nbviewer.org/github/XufengGAO/iapr/blob/master/labs/lab_02_object_description.ipynb
 [l03_nbviewer]: https://nbviewer.org/github/XufengGAO/iapr/blob/master/labs/lab_03_classification.ipynb
 
+### Project
+
+- [project][project] (Due: Thu, Jun 02, 2022)
+
+[project]: https://nbviewer.org/github/XufengGAO/iapr/blob/master/project/project.ipynb
+
 ### Misc
 
 - Environment installation for our notebooks: [readme_install.md](./readme_install.md)
