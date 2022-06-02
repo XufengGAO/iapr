@@ -1,4 +1,5 @@
 import warnings
+
 warnings.filterwarnings('ignore')
 
 from PIL import Image
@@ -6,8 +7,9 @@ import numpy as np
 from preprocess_utils import cropImgParts, PART_NAMES, cropTable
 from chip_utils import getChipRes
 from card_utils import checkNoPlay, extractTableCard
+
 # from data_utils import getGameDict
-from yolodetector.detect import card_detect
+from yolodetector.detect import detectFromNp, detectFromFile
 
 
 def process_image(

@@ -13,6 +13,7 @@ python -m pip install webcolors opencv-python
 python -m pip install jupyterlab
 
 # to enable toc
+python -m pip install nbconvert
 python -m pip install jupyter_contrib_nbextensions
 jupyter contrib nbextension install --user
 ```
