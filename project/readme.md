@@ -3,11 +3,14 @@
 ## Announcements on the Moodle
 
 - [Project announces and treys library Errors](https://moodle.epfl.ch/mod/forum/discuss.php?d=76543)
+- Updated CSV: `./data/train/updated_train_labels.csv`
 
 ## Installation instructions
 
 ```shell
 python -m pip install treys==0.1.4
+# to install custom yolodetector
+python -m pip install -e .
 ```
 
 ## Folder structure

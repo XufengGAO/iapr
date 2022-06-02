@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings('ignore')
+
+from PIL import Image
 import numpy as np
 from preprocess_utils import cropImgParts, PART_NAMES, cropTable
 from chip_utils import getChipRes
@@ -45,7 +49,14 @@ def process_image(
     img_table_cards = extractTableCard(img_part_t=img_part_t, debug=debug)
     t15_results = {}
 
-    card_detect(img_table_cards[0])
+    test_img = Image.fromarray(img_table_cards[0])
+    detected_res = card_detect(
+        test_img,
+        cfgfile='./yolodetector/yolov3-tiny.cfg',
+        weightfile='./yolodetector/backup/hardest.weights',
+        namesfile='./yolodetector/cards_data/cards_iapr.names',
+    )
+    print(detected_res)
 
     # step5: check not-playing ids -> List[bool]
     img_players_np = np.asarray(img_parts[:4])
@@ -92,7 +103,7 @@ def process_image(
 
 
 def main():
-    res = process_image('data/train/train_22.jpg', debug=True)
+    res = process_image('data/train/train_22.jpg', debug=False)
     print(res)
 
 
