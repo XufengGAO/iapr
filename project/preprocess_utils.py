@@ -39,6 +39,8 @@ def regulateRect(rect):
     rect_list = list(rect)
     if rect_list[2] < -45:
         rect_list[2] += 90
+    elif rect_list[2] > 45:
+        rect_list[2] -= 90
     rect = tuple(rect_list)
     return rect
 
