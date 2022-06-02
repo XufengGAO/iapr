@@ -2,7 +2,8 @@ import numpy as np
 from preprocess_utils import cropImgParts, PART_NAMES, cropTable
 from chip_utils import getChipRes
 from card_utils import checkNoPlay, extractTableCard
-from data_utils import getGameDict
+# from data_utils import getGameDict
+from yolodetector.detect import card_detect
 
 
 def process_image(
@@ -43,6 +44,8 @@ def process_image(
     img_part_t = np.asarray(img_parts[4])
     img_table_cards = extractTableCard(img_part_t=img_part_t, debug=debug)
     t15_results = {}
+
+    card_detect(img_table_cards[0])
 
     # step5: check not-playing ids -> List[bool]
     img_players_np = np.asarray(img_parts[:4])
