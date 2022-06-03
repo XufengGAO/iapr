@@ -2,6 +2,8 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
+from typing import Dict
+
 from PIL import Image
 import numpy as np
 from preprocess_utils import cropImgParts, PART_NAMES, cropTable
@@ -14,12 +16,27 @@ from detect_utils import detectTableCard, detectPlayerCard
 
 
 def process_image(
-    file,
-    debug=False,
-    viz_parts=False,
-    verbose=False,
-    rect_offset=70,
-):
+    file: str,
+    debug: bool = False,
+    viz_parts: bool = False,
+    verbose: bool = False,
+    rect_offset: int = 70,
+) -> Dict:
+    """Process image and return information. To return the value of the cards we use
+    the following format: {number}{color}. Where
+        - color is either (D)imanond, (H)eart, (S)pade, (C)lub
+        - number is either 2-10, (J)ack, (Q)ueen, (K)ing. A(ce).
+
+    Args:
+        file (str): Input image to process
+        debug (bool, optional): debug flag. Defaults to False.
+        viz_parts (bool, optional): viz cropped parts flag. Defaults to False.
+        verbose (bool, optional): verbose flag. Defaults to False.
+        rect_offset (int, optional): rectangle offset when cropping table. Defaults to 70.
+
+    Returns:
+        Dict: results of chips, table cards, and player cards
+    """
     img_id = file.split('/')[-1][:-4]
     # step1: crop table from origin image
     table_crop, rect, rect_origin, imgs_debug = cropTable(
