@@ -9,13 +9,15 @@ from chip_utils import getChipRes
 from card_utils import checkNoPlay, extractTableCard
 
 # from data_utils import getGameDict
-from yolodetector.detect import detectFromNp, detectFromFile
+from yolodetector.detect import detectFromNp, loadYoloModel
+from detect_utils import detectTableCard
 
 
 def process_image(
     file,
     debug=False,
     viz_parts=False,
+    verbose=True,
 ):
     img_id = file.split('/')[-1][:-4]
     # step1: crop table from origin image
@@ -46,19 +48,16 @@ def process_image(
         viz_res=debug,
         debug=False,
     )
-    # step4: detect T1-T5 cards
+    if verbose:
+        print(chip_res)
+
+    # step4: detect T1-T5 cards with YOLO detector
     img_part_t = np.asarray(img_parts[4])
     img_table_cards = extractTableCard(img_part_t=img_part_t, debug=debug)
-    t15_results = {}
-
-    test_img = Image.fromarray(img_table_cards[0])
-    detected_res = card_detect(
-        test_img,
-        cfgfile='./yolodetector/yolov3-tiny.cfg',
-        weightfile='./yolodetector/backup/hardest.weights',
-        namesfile='./yolodetector/cards_data/cards_iapr.names',
-    )
-    print(detected_res)
+    model = loadYoloModel()
+    t15_results = detectTableCard(img_table_cards, model, debug=debug)
+    if verbose:
+        print(t15_results)
 
     # step5: check not-playing ids -> List[bool]
     img_players_np = np.asarray(img_parts[:4])
@@ -76,7 +75,7 @@ def process_image(
     player_results = {}
 
     # step7: merge all results
-    dummy_results = {**t15_results, **player_results, **chip_res}
+    # dummy_results = {**t15_results, **player_results, **chip_res}
 
     dummy_results = {
         # Flop, river and turn
@@ -105,7 +104,7 @@ def process_image(
 
 
 def main():
-    res = process_image('data/train/train_22.jpg', debug=False)
+    res = process_image('data/train/train_00.jpg', debug=False)
     print(res)
 
 

@@ -1,9 +1,10 @@
 import sys
 import time
 from PIL import Image, ImageDraw
+
 # from models.tiny_yolo import TinyYoloNet
-from utils import *
-from darknet import Darknet
+from yolodetector.detect_utils import *
+from yolodetector.darknet import Darknet
 import cv2
 
 namesfile = None
@@ -21,7 +22,7 @@ def detect(cfgfile, weightfile):
 
     while True:
         ret, frame = cap.read()  # returns (True, image) if everything went well
-        sized = frame[:m.width, :m.height]
+        sized = frame[: m.width, : m.height]
         start = time.time()
 
         # nms thresholding etc happens here
@@ -47,4 +48,3 @@ if __name__ == '__main__':
     else:
         print('Usage: ')
         print('  python detect.py cfgfile weightfile imgfile names')
-

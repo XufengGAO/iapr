@@ -1,9 +1,13 @@
+# std
 import sys, time, pdb
 from pathlib import Path
 from typing import Dict, Union
-from PIL import Image
 
-sys.path.append(r'C:\Users\Jugg\Desktop\iapr\project\PlaycDC\YOLO')
+# imported
+from PIL import Image
+import torch.nn as nn
+
+# custom
 from yolodetector.detect_utils import *
 from yolodetector.darknet import Darknet
 
@@ -13,7 +17,21 @@ WEIGHT = os.path.join(curr_dir_path, 'backup/hardest.weights')
 NAMES = os.path.join(curr_dir_path, 'cards_data/cards_iapr.names')
 
 
-def loadYoloModel(cfgfile=CFG, weightfile=WEIGHT, use_cuda=True):
+def loadYoloModel(
+    cfgfile: Union[str, Path] = CFG,
+    weightfile: Union[str, Path] = WEIGHT,
+    use_cuda: bool = True,
+) -> nn.Module:
+    """_summary_
+
+    Args:
+        cfgfile (Union[str, Path], optional): _description_. Defaults to CFG.
+        weightfile (Union[str, Path], optional): _description_. Defaults to WEIGHT.
+        use_cuda (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        nn.Module: _description_
+    """
     model = Darknet(cfgfile)
     model.load_weights(weightfile)
     print('Loading weights from %s... Done!' % (weightfile))
@@ -24,28 +42,23 @@ def loadYoloModel(cfgfile=CFG, weightfile=WEIGHT, use_cuda=True):
 
 def detectFromFile(
     imgfile: Union[str, Path],
-    cfgfile: Union[str, Path] = CFG,
-    weightfile: Union[str, Path] = WEIGHT,
+    model: nn.Module,
     namesfile: Union[str, Path] = NAMES,
-    use_cuda: bool = True,
 ) -> Dict:
-    """Method that performs prediction given an image and a weightfile
+    """Method that performs prediction given image path and a weightfile
 
     Args:
         imgfile (Union[str, Path]): _description_
-        cfgfile (Union[str, Path], optional): _description_. Defaults to CFG.
-        weightfile (Union[str, Path], optional): _description_. Defaults to WEIGHT.
+        model (nn.Module): _description_
         namesfile (Union[str, Path], optional): _description_. Defaults to NAMES.
-        use_cuda (bool, optional): _description_. Defaults to True.
 
     Returns:
         Dict: detected results with {res: confidence} like dictionary
     """
-    model = loadYoloModel(cfgfile=cfgfile, weightfile=weightfile, use_cuda=True)
     img = Image.open(imgfile).convert('RGB')
     sized = img.resize((model.width, model.height))
     # start = time.time()
-    boxes = do_detect(model, sized, 0.1, 0.1, use_cuda)
+    boxes = do_detect(model, sized, 0.1, 0.1)
     # finish = time.time()
     # print('%s: Predicted in %f seconds.' % (imgfile, (finish - start)))
     class_names = load_class_names(namesfile)
@@ -59,17 +72,23 @@ def detectFromFile(
     return detected_res
 
 
-def detectFromNp(img, cfgfile=CFG, weightfile=WEIGHT, namesfile=NAMES):
-    """Method that performs prediction given an image and a weightfile"""
-    model = Darknet(cfgfile)
-    model.load_weights(weightfile)
-    print('Loading weights from %s... Done!' % (weightfile))
-    use_cuda = False
-    if use_cuda:
-        model.cuda()
-    # img = Image.open(imgfile).convert('RGB')
+def detectFromNp(
+    img: Image,
+    model: nn.Module,
+    namesfile: Union[str, Path] = NAMES,
+) -> Dict:
+    """Method that performs prediction given an PIL image and a weightfile
+
+    Args:
+        imgfile (Union[str, Path]): _description_
+        model (nn.Module): _description_
+        namesfile (Union[str, Path], optional): _description_. Defaults to NAMES.
+
+    Returns:
+        Dict: detected results with {res: confidence} like dictionary
+    """
     sized = img.resize((model.width, model.height))
-    boxes = do_detect(model, sized, 0.1, 0.1, use_cuda)
+    boxes = do_detect(model, sized, 0.1, 0.1)
 
     class_names = load_class_names(namesfile)
     # cls_conf = box[5]
@@ -83,10 +102,10 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         # Example: python -m yolodetector.detect test_2.png
         imgfile = sys.argv[1]  # source img file
+        model = loadYoloModel(cfgfile=CFG, weightfile=WEIGHT, use_cuda=True)
         detected_res = detectFromFile(
             imgfile,
-            CFG,
-            WEIGHT,
+            model,
             NAMES,
         )
         print("Estimated:", detected_res)
@@ -96,10 +115,11 @@ if __name__ == '__main__':
         weightfile = sys.argv[2]
         imgfile = sys.argv[3]
         globals()["namesfile"] = NAMES
+        model = loadYoloModel(cfgfile=CFG, weightfile=WEIGHT, use_cuda=True)
         detected_res = detectFromFile(
             imgfile,
-            cfgfile,
-            weightfile,
+            model,
+            NAMES,
         )
         print("Estimated:", detected_res)
     else:

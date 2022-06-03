@@ -7,10 +7,10 @@ import torch.nn as nn
 from torchvision import datasets, transforms
 import gc
 
-import dataset
-from utils import *
+import yolodetector.dataset
+from yolodetector.detect_utils import *
 from yolodetector.cfg_utils import parse_cfg
-from darknet import Darknet
+from yolodetector.darknet import Darknet
 import argparse
 
 FLAGS = None
@@ -25,10 +25,14 @@ dot_interval = 70  # batches
 
 # Test parameters
 evaluate = False
-conf_thresh = 0.25 # smaller confidence than this means we get rid of the prediction right away
-nms_thresh = 0.4 # parameter of non-maximum suppression. The lower this value, the more liberal YOLO will find boxes next
-                 # to each other.
-iou_thresh = 0.5 # two bounding boxes with a larger IoU will count as positively localized
+conf_thresh = (
+    0.25  # smaller confidence than this means we get rid of the prediction right away
+)
+nms_thresh = 0.4  # parameter of non-maximum suppression. The lower this value, the more liberal YOLO will find boxes next
+# to each other.
+iou_thresh = (
+    0.5  # two bounding boxes with a larger IoU will count as positively localized
+)
 
 
 # Training settings
@@ -39,19 +43,27 @@ def load_testlist(testlist):
 
     kwargs = {'num_workers': num_workers, 'pin_memory': True} if use_cuda else {}
     loader = torch.utils.data.DataLoader(
-        dataset.listDataset(testlist,
-                            shape=(init_width, init_height),
-                            shuffle=False,
-                            transform=transforms.Compose([transforms.ToTensor(), ]), train=False),
-                            batch_size=batch_size,
-                            shuffle=False,
-                            **kwargs)
+        dataset.listDataset(
+            testlist,
+            shape=(init_width, init_height),
+            shuffle=False,
+            transform=transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                ]
+            ),
+            train=False,
+        ),
+        batch_size=batch_size,
+        shuffle=False,
+        **kwargs
+    )
     return loader
 
 
 def main():
     """main method, containing training logic such as hardware, optimizer, weight loader, dataloaders etc.
-       we make a number of variables available globally, as we will use them within the train method later on
+    we make a number of variables available globally, as we will use them within the train method later on
     """
     datacfg = FLAGS.data
     cfgfile = FLAGS.config
@@ -104,7 +116,6 @@ def main():
 
     nsamples = file_lines(trainlist)
 
-
     init_epoch = model.seen // nsamples
 
     global loss_layers
@@ -127,9 +138,13 @@ def main():
         else:
             params += [{'params': [value], 'weight_decay': decay * batch_size}]
     global optimizer
-    optimizer = optim.SGD(model.parameters(),
-                          lr=learning_rate / batch_size, momentum=momentum,
-                          dampening=0, weight_decay=decay * batch_size)
+    optimizer = optim.SGD(
+        model.parameters(),
+        lr=learning_rate / batch_size,
+        momentum=momentum,
+        dampening=0,
+        weight_decay=decay * batch_size,
+    )
 
     if evaluate:
         logging('evaluating ...')
@@ -137,7 +152,7 @@ def main():
     else:
         try:
             """here, the magic happens.
-               we call train() every epoch and test() / savemodel() every few epochs
+            we call train() every epoch and test() / savemodel() every few epochs
             """
             print("Training for ({:d}) epochs.".format(max_epochs))
             fscore = 0
@@ -190,37 +205,52 @@ def train(epoch):
     """
     global processed_batches
     t0 = time.time()
-    cur_model = curmodel() # return model from the main() loop above, containing all sorts of information that we gave it
+    cur_model = (
+        curmodel()
+    )  # return model from the main() loop above, containing all sorts of information that we gave it
     init_width = cur_model.width
     init_height = cur_model.height
     kwargs = {'num_workers': num_workers, 'pin_memory': True} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
-        dataset.listDataset(trainlist, shape=(init_width, init_height),
-                            shuffle=True,
-                            transform=transforms.Compose([
-                                transforms.ToTensor(),
-                            ]),
-                            train=True,
-                            seen=cur_model.seen,
-                            batch_size=batch_size,
-                            num_workers=num_workers),
-        batch_size=batch_size, shuffle=False, **kwargs)
+        dataset.listDataset(
+            trainlist,
+            shape=(init_width, init_height),
+            shuffle=True,
+            transform=transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                ]
+            ),
+            train=True,
+            seen=cur_model.seen,
+            batch_size=batch_size,
+            num_workers=num_workers,
+        ),
+        batch_size=batch_size,
+        shuffle=False,
+        **kwargs
+    )
 
     processed_batches = cur_model.seen // batch_size
     lr = adjust_learning_rate(optimizer, processed_batches)
-    logging('epoch %d, processed %d samples, lr %e' % (epoch, epoch * len(train_loader.dataset), lr))
-    model.train() # enable train mode
+    logging(
+        'epoch %d, processed %d samples, lr %e'
+        % (epoch, epoch * len(train_loader.dataset), lr)
+    )
+    model.train()  # enable train mode
 
     for batch_idx, (data, target) in enumerate(train_loader):
         """loop through dataloader, returning batches of size batch_size, usually set to 32"""
         adjust_learning_rate(optimizer, processed_batches)
         processed_batches = processed_batches + 1
 
-        data, target = data.to(device), target.to(device) # send data and bounding boxes to GPU with CUDA if set to ON
+        data, target = data.to(device), target.to(
+            device
+        )  # send data and bounding boxes to GPU with CUDA if set to ON
 
-        optimizer.zero_grad() # reset gradients
+        optimizer.zero_grad()  # reset gradients
 
-        output = model(data) # forward pass
+        output = model(data)  # forward pass
 
         org_loss = []
         for i, l in enumerate(loss_layers):
@@ -229,11 +259,13 @@ def train(epoch):
             ol = l(output[i]['x'], target)
             org_loss.append(ol)
 
-        sum(org_loss).backward() # calculate gradients with backpropagation
+        sum(org_loss).backward()  # calculate gradients with backpropagation
 
-        nn.utils.clip_grad_norm_(model.parameters(), 1000) # gradient clipping to prevent overflows etc.
+        nn.utils.clip_grad_norm_(
+            model.parameters(), 1000
+        )  # gradient clipping to prevent overflows etc.
 
-        optimizer.step()# perform optimizer step
+        optimizer.step()  # perform optimizer step
 
         del data, target
         org_loss.clear()
@@ -258,7 +290,10 @@ def savemodel(epoch, nsamples, curmax=False):
         cur_model.save_weights('%s/localmax.weights' % (backupdir))
     else:
         cur_model.save_weights('%s/%06d.weights' % (backupdir, epoch + 1))
-        old_wgts = '%s/%06d.weights' % (backupdir, epoch + 1 - keep_backup * save_interval)
+        old_wgts = '%s/%06d.weights' % (
+            backupdir,
+            epoch + 1 - keep_backup * save_interval,
+        )
         try:  # it avoids the unnecessary call to os.path.exists()
             os.remove(old_wgts)
         except OSError:
@@ -267,8 +302,9 @@ def savemodel(epoch, nsamples, curmax=False):
 
 def test(epoch):
     """Test logic - one forward pass through the network is performed for a given batch
-       using the evaluation methods from utils.py, we calculate precision, recall, and F-score
+    using the evaluation methods from utils.py, we calculate precision, recall, and F-score
     """
+
     def truths_length(truths):
         for i in range(50):
             if truths[i][1] == 0:
@@ -287,7 +323,9 @@ def test(epoch):
             """loop through test_loader, returning batches of images and corresponding bounding boxes"""
             data = data.to(device)
             output = model(data)
-            all_boxes = get_all_boxes(output, conf_thresh, num_classes, use_cuda=use_cuda)
+            all_boxes = get_all_boxes(
+                output, conf_thresh, num_classes, use_cuda=use_cuda
+            )
 
             for k in range(data.size(0)):
                 """loop through each image separately"""
@@ -305,31 +343,59 @@ def test(epoch):
                 for i in range(num_gts):
                     """loop over all ground truth bounding boxes"""
                     gt_boxes = torch.FloatTensor(
-                        [truths[i][1], truths[i][2], truths[i][3], truths[i][4], 1.0, 1.0, truths[i][0]])
+                        [
+                            truths[i][1],
+                            truths[i][2],
+                            truths[i][3],
+                            truths[i][4],
+                            1.0,
+                            1.0,
+                            truths[i][0],
+                        ]
+                    )
                     gt_boxes = gt_boxes.repeat(num_pred, 1).t()
                     pred_boxes = torch.FloatTensor(boxes).t()
                     # calculate all IoUs of a given GT bounding box and return the best ones
-                    best_iou, best_j = torch.max(multi_bbox_ious(gt_boxes, pred_boxes, x1y1x2y2=False), 0)
+                    best_iou, best_j = torch.max(
+                        multi_bbox_ious(gt_boxes, pred_boxes, x1y1x2y2=False), 0
+                    )
                     # pred_boxes and gt_boxes are transposed for torch.max
-                    if best_iou > iou_thresh and pred_boxes[6][best_j] == gt_boxes[6][0]:
+                    if (
+                        best_iou > iou_thresh
+                        and pred_boxes[6][best_j] == gt_boxes[6][0]
+                    ):
                         correct += 1
 
     precision = 1.0 * correct / (proposals + eps)
     recall = 1.0 * correct / (total + eps)
     fscore = 2.0 * precision * recall / (precision + recall + eps)
-    logging("correct: %d, precision: %f, recall: %f, fscore: %f" % (correct, precision, recall, fscore))
+    logging(
+        "correct: %d, precision: %f, recall: %f, fscore: %f"
+        % (correct, precision, recall, fscore)
+    )
     return fscore
 
 
 if __name__ == '__main__':
     """exemplary usage: python train.py -d cards_data/cards.data -c cards_data/yolov3-tiny.cfg -w backup/000040.weights"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', '-d',
-                        type=str, default='cfg/sketch.data', help='data definition file')
-    parser.add_argument('--config', '-c',
-                        type=str, default='cfg/sketch.cfg', help='network configuration file')
-    parser.add_argument('--weights', '-w',
-                        type=str, default='weights/yolov3.weights', help='initial weights file')
+    parser.add_argument(
+        '--data', '-d', type=str, default='cfg/sketch.data', help='data definition file'
+    )
+    parser.add_argument(
+        '--config',
+        '-c',
+        type=str,
+        default='cfg/sketch.cfg',
+        help='network configuration file',
+    )
+    parser.add_argument(
+        '--weights',
+        '-w',
+        type=str,
+        default='weights/yolov3.weights',
+        help='initial weights file',
+    )
 
     FLAGS, _ = parser.parse_known_args()
     main()

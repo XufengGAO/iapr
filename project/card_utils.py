@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
@@ -105,6 +105,7 @@ cv.line(
 ######################################################
 #      Function to extract T-area cards              #
 ######################################################
+
 
 def extractTableCard(
     img_part_t: np.array, use_alpha: bool = False, debug: bool = False
@@ -240,6 +241,7 @@ def extractTableCard(
 
     return img_table_cards
 
+
 ######################################################
 #      Functions to extract Player cards             #
 ######################################################
@@ -255,8 +257,16 @@ def getPlayerRes(
     function to get the player results
     """
     # results init
-    chip_results = {"P11": 0, "P12": 0, "P21": 0, "P22": 0, "P31": 0, "P32": 0,\
-                    "P41": 0, "P42": 0}
+    chip_results = {
+        "P11": 0,
+        "P12": 0,
+        "P21": 0,
+        "P22": 0,
+        "P31": 0,
+        "P32": 0,
+        "P41": 0,
+        "P42": 0,
+    }
     # rotate angles
     rotate_angles = {0: 90, 1: -180, 2: -180, 3: -90}
 
@@ -265,9 +275,18 @@ def getPlayerRes(
     for index, img_player in enumerate(img_players):
         imgwarps_list = extractPlayerCard(img_player, rotate_angles[index], debug)
         total_list += imgwarps_list
-        
+
     # just for testing
-    img_title = ['img {} P1.1'.format(img_ID), 'P1.2', 'P2.1', 'P2.2', 'P3.1', 'P3.2', 'P4.1', 'P4.2']
+    img_title = [
+        'img {} P1.1'.format(img_ID),
+        'P1.2',
+        'P2.1',
+        'P2.2',
+        'P3.1',
+        'P3.2',
+        'P4.1',
+        'P4.2',
+    ]
     """
         plotMultipleImages(1, 8, total_list, \
                                img_title,\
@@ -276,20 +295,21 @@ def getPlayerRes(
 
     return {}
 
+
 def getPerpCoord(aX, aY, bX, bY, length):
     """
     function to reorder the position of 4 corners
     """
-    vX = bX-aX
-    vY = bY-aY
-    mag = math.sqrt(vX*vX + vY*vY)
-    if (mag < 0.5):  # Note: should be removed if detecting playing is enabled
+    vX = bX - aX
+    vY = bY - aY
+    mag = math.sqrt(vX * vX + vY * vY)
+    if mag < 0.5:  # Note: should be removed if detecting playing is enabled
         mag = 1
     vX = vX / mag
     vY = vY / mag
     # clockwise direction
     temp = vX
-    vX = 0-vY
+    vX = 0 - vY
     vY = temp
 
     # two direction points
@@ -298,6 +318,7 @@ def getPerpCoord(aX, aY, bX, bY, length):
     dX = bX - vX * length
     dY = bY - vY * length
     return (int(cX), int(cY)), (int(dX), int(dY))
+
 
 def order_points(pts):
     # sort the points based on their x-coordinates
@@ -322,48 +343,50 @@ def order_points(pts):
     # bottom-right, and bottom-left order
     return np.array([tl, tr, br, bl], dtype="float32")
 
+
 def getNormCoord(point_sets):
-    
-    # rename the corners 
+
+    # rename the corners
     # lt = left top, lb = left bottom, lt and lb are in the same edge of bottom card
     # rt = right top, rb = right bottom , rt and rb are in the same edge of up card
     lt = (int(point_sets[0][0]), int(point_sets[0][1]))
     lb = (int(point_sets[3][0]), int(point_sets[3][1]))
     rt = (int(point_sets[1][0]), int(point_sets[1][1]))
     rb = (int(point_sets[2][0]), int(point_sets[2][1]))
-    
+
     # estimate the length of long side
-    long_side_1 = math.sqrt((lt[0] - lb[0])**2 + (lt[1] - lb[1])**2)
-    long_side_2 = math.sqrt((rt[0] - rb[0])**2 + (rt[1] - rb[1])**2)
+    long_side_1 = math.sqrt((lt[0] - lb[0]) ** 2 + (lt[1] - lb[1]) ** 2)
+    long_side_2 = math.sqrt((rt[0] - rb[0]) ** 2 + (rt[1] - rb[1]) ** 2)
     long_side = max(long_side_1, long_side_2)
 
     # find the symmertry points of lt, lb, rt, rb
-    lt_sym,_  = getPerpCoord(lb[0], lb[1], lt[0], lt[1], long_side*0.35) # norm to tl
-    _, lb_sym = getPerpCoord(lt[0], lt[1], lb[0], lb[1], long_side*0.35) # norm to tr
-    _, rt_sym = getPerpCoord(rb[0], rb[1], rt[0], rt[1], long_side*0.71) # norm to br
-    rb_sym, _  = getPerpCoord(rt[0], rt[1], rb[0], rb[1], long_side*0.71) # norm to bl
-    
+    lt_sym, _ = getPerpCoord(lb[0], lb[1], lt[0], lt[1], long_side * 0.35)  # norm to tl
+    _, lb_sym = getPerpCoord(lt[0], lt[1], lb[0], lb[1], long_side * 0.35)  # norm to tr
+    _, rt_sym = getPerpCoord(rb[0], rb[1], rt[0], rt[1], long_side * 0.71)  # norm to br
+    rb_sym, _ = getPerpCoord(rt[0], rt[1], rb[0], rb[1], long_side * 0.71)  # norm to bl
+
     # box points for further perspective transform
-    bottom_box = np.zeros((4,2)) # clockwise from lt
+    bottom_box = np.zeros((4, 2))  # clockwise from lt
     bottom_box[0] = [lt[0], lt[1]]
     bottom_box[1] = [lt_sym[0], lt_sym[1]]
     bottom_box[2] = [lb_sym[0], lb_sym[1]]
     bottom_box[3] = [lb[0], lb[1]]
-    
-    up_box = np.zeros((4,2)) # clockwise from lt
+
+    up_box = np.zeros((4, 2))  # clockwise from lt
     up_box[0] = [rt_sym[0], rt_sym[1]]
     up_box[1] = [rt[0], rt[1]]
     up_box[2] = [rb[0], rb[1]]
-    up_box[3] = [rb_sym[0], rb_sym[1]]   
-    
-    
+    up_box[3] = [rb_sym[0], rb_sym[1]]
+
     return [bottom_box, up_box]
+
 
 ## refernce card size
 refCard = np.array([[0, 0], [cardW, 0], [cardW, cardH], [0, cardH]], dtype=np.float32)
 refCardRot = np.array(
     [[cardW, 0], [cardW, cardH], [0, cardH], [0, 0]], dtype=np.float32
 )
+
 
 def extractPlayerCard(
     player: np.array, rotate_angle: int = 0, debug: bool = False
@@ -379,8 +402,8 @@ def extractPlayerCard(
     """
     # step1: Image downscale
     scale_percent = 30
-    width = int(player.shape[1] * scale_percent/100)
-    height = int(player.shape[0] * scale_percent/100)
+    width = int(player.shape[1] * scale_percent / 100)
+    height = int(player.shape[0] * scale_percent / 100)
     dim = (width, height)
     resized_player = cv.resize(player, dim, interpolation=cv.INTER_AREA)
 
@@ -391,13 +414,13 @@ def extractPlayerCard(
     gaussian = cv.GaussianBlur(gaussian, (3, 3), 0)
 
     # threholds for canny edge detection
-    threshold1 = 185 
+    threshold1 = 185
     threshold2 = 0
     edges = cv.Canny(gaussian, threshold1, threshold2)
 
     # small dilate to make sure card outline is complete
-    kernelDilate = np.ones((2,2),np.uint8) 
-    edges  = cv.dilate(edges, kernelDilate, iterations = 1)
+    kernelDilate = np.ones((2, 2), np.uint8)
+    edges = cv.dilate(edges, kernelDilate, iterations=1)
 
     # rotate the image to fit the view
     edges = imutils.rotate_bound(edges, rotate_angle)
@@ -405,14 +428,14 @@ def extractPlayerCard(
 
     # step3: find the geenral outline of cards (4-points polygon)
     contours, _ = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key=lambda c: cv.arcLength(c, False),reverse=True)[:3]  
-    
+    contours = sorted(contours, key=lambda c: cv.arcLength(c, False), reverse=True)[:3]
+
     convexHulls = []
     for contour in contours:
         convexHull = cv.convexHull(contour)
         convexHulls.append(convexHull)
-    convexHulls_sorted = sorted(convexHulls, key=cv.contourArea,reverse=True)[:1]  
-        
+    convexHulls_sorted = sorted(convexHulls, key=cv.contourArea, reverse=True)[:1]
+
     c = convexHulls_sorted[0]
     eps = 0.001
     while True:
@@ -422,21 +445,23 @@ def extractPlayerCard(
         eps += 0.008
         if len(approx) <= 4:
             break
-            
+
     if len(approx) < 4:
         return [resized_player, resized_player]
 
     # step4: reorder the points
-    new_approx = np.zeros((4,2))
+    new_approx = np.zeros((4, 2))
     for ind, points in enumerate(approx):
         new_approx[ind] = points
-    point_sets = order_points(new_approx) # np.array([top_left, top_right, bottom_right, bottom_left], dtype="float32")
-    
+    point_sets = order_points(
+        new_approx
+    )  # np.array([top_left, top_right, bottom_right, bottom_left], dtype="float32")
+
     # split the overlapping players
     boxes = getNormCoord(point_sets)
     imgwarp = None
     imgwarps_list = []
-    sharpen_kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+    sharpen_kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
     for box in boxes:
         Mp = cv.getPerspectiveTransform(np.float32(box), refCard)
         imgwarp = cv.warpPerspective(resized_player, Mp, (cardW, cardH))
@@ -450,7 +475,7 @@ def extractPlayerCard(
         plotMultipleImages(
             1,
             3,
-            images=[resized_player]+imgwarps_list,
+            images=[resized_player] + imgwarps_list,
             titles=imgs_name,
             cmap=['rgb'] * 3,
             figsize=(10, 6),

@@ -11,6 +11,7 @@
 python -m pip install treys==0.1.4
 # to install custom yolodetector
 python -m pip install -e .
+python -m pip install imutils
 ```
 
 ## Folder structure
