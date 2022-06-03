@@ -1,15 +1,15 @@
+import math
 from typing import List, Dict
 import numpy as np
+
 import cv2 as cv
 import matplotlib.pyplot as plt
-from viz_utils import plotMultipleImages
-
-import math
 import imutils
 from scipy.spatial import distance
 
+from viz_utils import plotMultipleImages
 
-# TODO: check paremeters
+
 def checkNoPlayOne(
     img_player: np.array,
     intensity_thresh: float = 0.8,

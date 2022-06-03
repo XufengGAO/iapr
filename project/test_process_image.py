@@ -6,11 +6,11 @@ from typing import Dict
 
 from PIL import Image
 import numpy as np
+
 from preprocess_utils import cropImgParts, PART_NAMES, cropTable
 from chip_utils import getChipRes
 from card_utils import checkNoPlay, extractTableCard, getPlayerRes, checkPlaying
-
-# from data_utils import getGameDict
+from utils import getGameDict
 from yolodetector.detect import detectFromNp, loadYoloModel
 from detect_utils import detectTableCard, detectPlayerCard
 

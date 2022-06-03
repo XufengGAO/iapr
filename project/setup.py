@@ -7,8 +7,8 @@ setup(
     name='yolodetector',
     version=0.1,
     description='Package of YOLO detection',
-    author='',
-    author_email='ziyi.zhao@epfl.ch',
+    author='Yujie He, Ziyi Zhao',
+    author_email='yujie.he@epfl.ch',
     packages=[
         'yolodetector',
         'yolodetector.layers',

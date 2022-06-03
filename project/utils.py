@@ -1,5 +1,5 @@
-import numpy as np
 import json
+
 import numpy as np
 from treys import Card
 import pandas as pd
@@ -224,6 +224,14 @@ def print_game(game_dict, true_game):
         print(f"\tfound: {chips_found[i]}. Count error: ( {diff} )", end='\n')
 
     print("__" * 20)
+
+
+def getGameDict(game_id=0, label_fn='data/train/updated_train_labels.csv'):
+    game_labels = pd.read_csv('data/train/updated_train_labels.csv')
+    game_labels = game_labels.fillna('0')
+    game = game_labels.iloc[[game_id]]
+    game_dict = {key: game.get(key).values[0] for key in game.columns}
+    return game_dict
 
 
 def eval_listof_games_custom(results_games, game_labels, game_id=[0, 1], verbose=False):
