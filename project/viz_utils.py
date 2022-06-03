@@ -62,3 +62,21 @@ def plotBboxInPlace(tables_crop_pil, boxes, im_names, fig_title=None):
     if fig_title is not None:
         ax.set_title(fig_title)
     ax.imshow(draw_image)
+
+
+def vizGameScores(avg_score, score_list, data_sz):
+    import seaborn as sns
+
+    sns.set_theme()
+
+    fig, ax = plt.subplots(figsize=(12, 4))
+    ax.plot(
+        score_list,
+        marker='o',
+        markerfacecolor='blue',
+        markersize=6,
+    )
+    ax.set_title("Score for each game")
+    ax.hlines(y=avg_score, xmin=0, xmax=data_sz - 1, linewidth=2, color='r')
+    ax.set_ylim([0.0, 1.0])
+    ax.set_xlim([-1, data_sz])
