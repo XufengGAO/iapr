@@ -1,9 +1,31 @@
+#!/usr/bin/env python3
+# -*-coding:utf-8 -*-
+# =============================================================================
+"""
+@Author        :   Yujie He
+@File          :   test_process_image.py
+@Date created  :   2022/06/03
+@Maintainer    :   Yujie He
+@Email         :   yujie.he@epfl.ch
+"""
+# =============================================================================
+"""
+The module provides test script for process all images from [train/test] data folder
+Usage:
+python test_process_image.py --mode train
+python test_process_image.py --mode test
+"""
+# =============================================================================
+
+import os
+from typing import Dict
 import warnings
 
 warnings.filterwarnings('ignore')
 
-from typing import Dict
-
+import argparse
+from tqdm import tqdm
+import pandas as pd
 from PIL import Image
 import numpy as np
 
@@ -13,6 +35,14 @@ from card_utils import checkNoPlay, extractTableCard, getPlayerRes, checkPlaying
 from utils import getGameDict
 from yolodetector.detect import detectFromNp, loadYoloModel
 from detect_utils import detectTableCard, detectPlayerCard
+from utils import (
+    eval_listof_games,
+    debug_listof_games,
+    save_results,
+    load_results,
+    eval_listof_games_custom,
+)
+from viz_utils import vizGameScores
 
 
 def process_image(
@@ -47,7 +77,7 @@ def process_image(
         use_convex_hull=False,
         resize_flag=True,
         resize_scale=4.0,
-        crop_sz=(800, 20),
+        crop_sz=(800, 0),
         rect_offset=rect_offset,
         debug=debug,
     )
@@ -115,7 +145,7 @@ def process_image(
     return results
 
 
-def main():
+def naive_main():
     res = process_image(
         'data/train/train_22.jpg',
         debug=False,
@@ -123,6 +153,53 @@ def main():
     )
     print(res)
 
+def main(mode: str = "train"):
+    # test | train
+    project_dir_path = os.path.dirname(os.path.realpath(__file__))
+    path_data = os.path.join(project_dir_path, "data", mode)
+    group_id = 32
+
+    # data_sz = 28
+    data_sz = np.loadtxt(os.path.join(path_data, mode+"_size.txt")).astype(int)
+
+    # Load images from folder
+    game_results = {}
+
+    # Evaluate three images
+    games_id = [i for i in range(data_sz)]  # to evaluate images
+
+    # for i in games_id:
+    for i in tqdm(range(data_sz)):
+        file = os.path.join(
+            path_data, "{}_{}.jpg".format(mode, str(i).zfill(2))
+        )  # Fill the string with zeros until it is 2 characters long
+        # open the image
+        results = process_image(file=file)
+        # Append result to array
+        game_results[i] = results
+
+        file_results = save_results(results=game_results, groupid=group_id)
+
+    loaded_results = load_results(file_results)
+    print("Evaluated games", list(loaded_results.keys()))
+
+    if mode == 'train':
+        # Read training data
+        game_labels = pd.read_csv('data/train/updated_train_labels.csv')
+        game_labels = game_labels.fillna('0')
+
+        avg_score, score_list = eval_listof_games_custom(game_results , game_labels , game_id = games_id)
+        vizGameScores(avg_score, score_list, data_sz)
+
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        default='test',
+        choices=['test', 'train'],
+        type=str,
+        help="data mode"
+        )
+    args = parser.parse_args()
+    main(args.mode)

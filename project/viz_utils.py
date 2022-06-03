@@ -1,4 +1,5 @@
 import copy
+from typing import List
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -64,7 +65,14 @@ def plotBboxInPlace(tables_crop_pil, boxes, im_names, fig_title=None):
     ax.imshow(draw_image)
 
 
-def vizGameScores(avg_score, score_list, data_sz):
+def vizGameScores(
+    avg_score: float,
+    score_list: List[float],
+    data_sz: int,
+    title: str = "all_game_scores",
+    save_fig: bool = True,
+    ):
+
     import seaborn as sns
 
     sns.set_theme()
@@ -80,3 +88,7 @@ def vizGameScores(avg_score, score_list, data_sz):
     ax.hlines(y=avg_score, xmin=0, xmax=data_sz - 1, linewidth=2, color='r')
     ax.set_ylim([0.0, 1.0])
     ax.set_xlim([-1, data_sz])
+
+    if save_fig:
+        fig.tight_layout()
+        plt.savefig(title+".pdf", dpi=300)
