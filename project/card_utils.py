@@ -401,7 +401,7 @@ def extractPlayerCard(
         List[np.array]: list of 2 extract player cards
     """
     # step1: Image downscale
-    scale_percent = 30
+    scale_percent = 50
     width = int(player.shape[1] * scale_percent / 100)
     height = int(player.shape[0] * scale_percent / 100)
     dim = (width, height)
@@ -410,7 +410,7 @@ def extractPlayerCard(
     # step2: RGB to Gray, histogram norm, noise removal and edge detection
     gray = cv.cvtColor(resized_player, cv.COLOR_RGB2GRAY)
     dst = cv.equalizeHist(gray)
-    gaussian = cv.GaussianBlur(dst, (13, 13), 0)
+    gaussian = cv.GaussianBlur(dst, (11, 11), 0)
     gaussian = cv.GaussianBlur(gaussian, (3, 3), 0)
 
     # threholds for canny edge detection
