@@ -251,7 +251,7 @@ def getPlayerRes(
     img_players: List[np.array],
     img_ID: int,
     debug=False,
-) -> Dict:
+) -> List[np.array]:
 
     """
     function to get the player results
@@ -293,7 +293,7 @@ def getPlayerRes(
                                ['rgb']*8, (25,25))
     """
 
-    return {}
+    return total_list
 
 
 def getPerpCoord(aX, aY, bX, bY, length):
