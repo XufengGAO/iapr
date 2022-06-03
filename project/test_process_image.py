@@ -6,18 +6,19 @@ from PIL import Image
 import numpy as np
 from preprocess_utils import cropImgParts, PART_NAMES, cropTable
 from chip_utils import getChipRes
-from card_utils import checkNoPlay, extractTableCard
+from card_utils import checkNoPlay, extractTableCard, getPlayerRes, checkPlaying
 
 # from data_utils import getGameDict
 from yolodetector.detect import detectFromNp, loadYoloModel
-from detect_utils import detectTableCard
+from detect_utils import detectTableCard, detectPlayerCard
 
 
 def process_image(
     file,
     debug=False,
     viz_parts=False,
-    verbose=True,
+    verbose=False,
+    rect_offset=70,
 ):
     img_id = file.split('/')[-1][:-4]
     # step1: crop table from origin image
@@ -30,7 +31,7 @@ def process_image(
         resize_flag=True,
         resize_scale=4.0,
         crop_sz=(800, 20),
-        rect_offset=50,
+        rect_offset=rect_offset,
         debug=debug,
     )
     # step: crop different image parts
@@ -53,58 +54,56 @@ def process_image(
 
     # step4: detect T1-T5 cards with YOLO detector
     img_part_t = np.asarray(img_parts[4])
-    img_table_cards = extractTableCard(img_part_t=img_part_t, debug=debug)
+    img_table_cards = extractTableCard(
+        img_part_t=img_part_t, use_alpha=False, debug=debug
+    )
     model = loadYoloModel()
-    t15_results = detectTableCard(img_table_cards, model, debug=debug)
+    t15_res = detectTableCard(img_table_cards, model, debug=debug)
     if verbose:
-        print(t15_results)
+        print(t15_res)
 
     # step5: check not-playing ids -> List[bool]
-    img_players_np = np.asarray(img_parts[:4])
-    playing_status = checkNoPlay(
-        img_players=img_players_np,
-        intensity_thresh=0.8,
-        red_thresh=0.2,
-        blue_thresh=0.023,
-        debug=debug,
-        fig_title=img_id,
-    )
+    img_players_np = [np.asarray(im) for im in img_parts[:4]]
+    # playing_status = checkNoPlay(
+    #     img_players=img_players_np,
+    #     intensity_thresh=0.8,
+    #     red_thresh=0.2,
+    #     blue_thresh=0.023,
+    #     debug=debug,
+    #     fig_title=img_id,
+    # )
+    playing_status = checkPlaying(img_players_np, debug=debug)
+    if verbose:
+        print(playing_status)
 
     # step6: detect players' cards
-    # player_results = detectPlayerCards(playing_status)
-    player_results = {}
+    # player_res = detectPlayerCards(playing_status)
+    img_player_cards = getPlayerRes(
+        img_players=img_players_np,
+        img_ID=img_id,
+        debug=debug,
+    )
+    player_res = detectPlayerCard(
+        img_player_cards=img_player_cards,
+        playing_status=playing_status,
+        model=model,
+        debug=debug,
+    )
+    if verbose:
+        print(player_res)
 
     # step7: merge all results
-    # dummy_results = {**t15_results, **player_results, **chip_res}
+    results = {**t15_res, **player_res, **chip_res}
 
-    dummy_results = {
-        # Flop, river and turn
-        "T1": "2C",
-        "T2": "AH",
-        "T3": "8D",
-        "T4": "JC",
-        "T5": "JS",
-        # Player cards
-        "P11": '2H',
-        "P12": '3C',
-        "P21": 'KS',
-        "P22": "QS",
-        "P31": "KD",
-        "P32": "5S",
-        "P41": "7H",
-        "P42": "8H",
-        # Chips
-        "CR": 1,
-        "CG": 1,
-        "CB": 1,
-        "CK": 5,
-        "CW": 0,
-    }
-    return dummy_results
+    return results
 
 
 def main():
-    res = process_image('data/train/train_00.jpg', debug=False)
+    res = process_image(
+        'data/train/train_22.jpg',
+        debug=False,
+        verbose=False,
+    )
     print(res)
 
 

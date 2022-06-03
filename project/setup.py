@@ -12,6 +12,5 @@ setup(
     packages=[
         'yolodetector',
         'yolodetector.layers',
-        'yolodetector.cfg',
     ],
 )

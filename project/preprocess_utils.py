@@ -95,7 +95,7 @@ def cropTableFromPre(
     dist_thresh=0.2,
     edge_dilate_nr=5,
     use_convex_hull=False,
-    rect_offset=40,
+    rect_offset=80,
     rect_scale=4.0,
     rect_trans=(800, 20),
     debug=False,

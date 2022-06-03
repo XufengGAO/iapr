@@ -34,7 +34,7 @@ def loadYoloModel(
     """
     model = Darknet(cfgfile)
     model.load_weights(weightfile)
-    print('Loading weights from %s... Done!' % (weightfile))
+    # print('Loading weights from %s... Done!' % (weightfile))
     if use_cuda:
         model.cuda()
     return model
@@ -93,7 +93,8 @@ def detectFromNp(
     class_names = load_class_names(namesfile)
     # cls_conf = box[5]
     # cls_id = box[6]
-    detected_res = {class_names[box[6]]: box[5].item() for box in boxes}
+    # conf: id
+    detected_res = {box[5].item(): class_names[box[6]] for box in boxes}
 
     return detected_res
 

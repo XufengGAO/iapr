@@ -10,6 +10,71 @@ from scipy.spatial import distance
 
 
 # TODO: check paremeters
+def checkNoPlayOne(
+    img_player: np.array,
+    intensity_thresh: float = 0.8,
+    red_thresh=0.2,
+    blue_thresh=0.023,
+    debug: bool = False,
+) -> List[bool]:
+    img_player_hsv = cv.cvtColor(np.array(img_player), cv.COLOR_BGR2HSV)
+
+    img_h = img_player_hsv[:, :, 0] / 255
+    img_s = img_player_hsv[:, :, 1] / 255
+
+    thresh_dict = {'red': [img_h, red_thresh], 'blue': [img_s, blue_thresh]}
+
+    playing_ = []
+    for key, val in thresh_dict.items():
+        img_vec = val[0].ravel()
+        intensity = img_vec[img_vec > intensity_thresh].sum() / np.prod(
+            img_vec.shape[:2]
+        )
+        playing = intensity < val[1]
+        playing_.append(playing)
+        if debug:
+            print('## ' + key)
+            print('Intensity:', intensity)
+            print('Playing:', playing)
+    player_status = np.all(playing_)
+
+    return player_status
+
+
+def checkNoPlayAll(
+    img_players: List[np.array],
+    intensity_thresh: float = 0.8,
+    red_thresh=0.2,
+    blue_thresh=0.023,
+    debug: bool = False,
+    fig_title: str = None,
+) -> List[bool]:
+    player_status = []
+    for idx, img_player in enumerate(img_players):
+        player_status_ = checkNoPlayOne(
+            img_player,
+            intensity_thresh,
+            red_thresh,
+            blue_thresh,
+            debug,
+        )
+        player_status.append(player_status_)
+    if debug:
+        print(player_status)
+        plotMultipleImages(
+            1,
+            4,
+            img_players,
+            titles=['p{}: {}'.format(i, player_status[i - 1]) for i in range(1, 5)],
+            cmap=['rgb', 'rgb', 'rgb', 'rgb'],
+            bold_axis=[not status for status in player_status],
+            fig_title=fig_title,
+            figsize=(20, 6),
+        )
+
+    return player_status
+
+
 def checkNoPlay(
     img_players: List[np.array],
     intensity_thresh: float = 0.8,
@@ -135,11 +200,16 @@ def extractTableCard(
 
     edges = cv.Canny(gaussian, threshold1, threshold2)
 
+    # small dilate to make sure card outline is complete
+    kernelDilate = np.ones((2, 2), np.uint8)
+    edges = cv.dilate(edges, kernelDilate, iterations=1)
+
     h, w, ch = img.shape
     contours, hierarchy = cv.findContours(
         edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE
     )
     contours = sorted(contours, key=lambda c: cv.arcLength(c, False), reverse=True)[:7]
+
     convexHulls = []
 
     for contour in contours:
@@ -156,11 +226,15 @@ def extractTableCard(
     # Both areas sould be very close
     rect_contour = []
 
+    if debug:
+        boxes = []
     for contour in convexHulls_sorted:
         # print(cv.contourArea(contour))
         rect = cv.minAreaRect(contour)
         box = cv.boxPoints(rect)
         box = np.int0(box)
+        if debug:
+            boxes.append(box)
         rect_contour.append(box)
 
     imgwarps_dict = {}
@@ -223,11 +297,35 @@ def extractTableCard(
 
     if debug:
         # image 1: contour
-        img_contour = np.zeros((h, w, ch), dtype=np.uint8)
-        cv.drawContours(img_contour, contours, -1, (255, 255, 255), 10)
-        _, ax = plt.subplots(1, 2, figsize=(20, 6))
+        img_contour1 = np.zeros((h, w, ch), dtype=np.uint8)
+        cv.drawContours(img_contour1, contours, -1, (255, 255, 255), 10)
+        img_contour2 = np.zeros((h, w, ch), dtype=np.uint8)
+        cv.drawContours(img_contour2, convexHulls_sorted, -1, (255, 255, 255), 10)
+        img_contour3 = np.zeros((h, w, ch), dtype=np.uint8)
+        cv.drawContours(img_contour3, rect_contour, -1, (255, 255, 255), 10)
+
+        # debug box
+        imgs_box_contour = []
+        for box in boxes:
+            img_contour_ = np.zeros((h, w, ch), dtype=np.uint8)
+            cv.drawContours(img_contour_, [box], -1, (255, 255, 255), 10)
+            imgs_box_contour.append(img_contour_)
+        imgs_name = ['box' + str(idx + 1) for idx in range(5)]
+        plotMultipleImages(
+            1,
+            5,
+            images=imgs_box_contour,
+            titles=imgs_name,
+            cmap=['gray'] * 5,
+            figsize=(20, 6),
+        )
+
+        # debug final cutted table card
+        _, ax = plt.subplots(4, 1, figsize=(8, 20))
         ax[0].imshow(img_part_t)
-        ax[1].imshow(img_contour)
+        ax[1].imshow(img_contour1)
+        ax[2].imshow(img_contour2)
+        ax[3].imshow(img_contour3)
         # image 2: 5 extracted images
         imgs_name = ['T1', 'T2', 'T3', 'T4', 'T5']
         plotMultipleImages(
@@ -483,6 +581,8 @@ def extractPlayerCard(
 
     return imgwarps_list
 
+
+# from Xufeng
 def checkPlaying(
     img_players: List[np.array],
     debug: bool = False,
@@ -496,7 +596,7 @@ def checkPlaying(
         red_lower = np.array([144, 24, 0])
         red_upper = np.array([179, 236, 255])
         red_mask = cv.inRange(image, red_lower, red_upper)
-        
+
         if np.sum(red_mask == 255) > 120000:
             is_playing.append(False)
             full_masks.append(red_mask)
@@ -512,15 +612,84 @@ def checkPlaying(
                 is_playing.append(False)
             else:
                 full_masks.append(P_im)
-                white_pixs.append('({} {})'.format(np.sum(red_mask == 255), np.sum(blue_mask == 255)))
+                white_pixs.append(
+                    '({} {})'.format(np.sum(red_mask == 255), np.sum(blue_mask == 255))
+                )
                 is_playing.append(True)
 
     if debug == True:
-        plotMultipleImages(1, 4, full_masks, ['P4 {} {}'.format(white_pixs[0], is_playing[0]), 'P3 {} {}'.format(white_pixs[1], is_playing[1]),\
-                                            'P2 {} {}'.format(white_pixs[2], is_playing[2]), 'P1 {} {}'.format(white_pixs[3], is_playing[3])],\
-                                            ['gray', 'gray', 'gray', 'gray'], (20, 20))   
+        plotMultipleImages(
+            1,
+            4,
+            full_masks,
+            titles=[
+                'P4 {} {}'.format(white_pixs[0], is_playing[0]),
+                'P3 {} {}'.format(white_pixs[1], is_playing[1]),
+                'P2 {} {}'.format(white_pixs[2], is_playing[2]),
+                'P1 {} {}'.format(white_pixs[3], is_playing[3]),
+            ],
+            cmap=['gray', 'gray', 'gray', 'gray'],
+            figsize=(20, 6),
+            bold_axis=is_playing,
+            fig_title=fig_title,
+        )
 
     return is_playing
 
 
+def checkPlayingSplit(
+    img_players: List[np.array],
+    debug: bool = False,
+    fig_title: str = None,
+) -> List[bool]:
+    full_masks = []
+    white_pixs = []
+    is_playing_ = []
+    for ind, P_im in enumerate(img_players):
+        image = cv.cvtColor(P_im, cv.COLOR_RGB2HSV)
+        red_lower = np.array([144, 24, 0])
+        red_upper = np.array([179, 236, 255])
+        red_mask = cv.inRange(image, red_lower, red_upper)
 
+        if np.sum(red_mask == 255) > 120000:
+            is_playing_.append(False)
+            full_masks.append(red_mask)
+            white_pixs.append(np.sum(red_mask == 255))
+        else:
+            blue_lower = np.array([58, 73, 0])
+            blue_upper = np.array([124, 255, 255])
+            image = cv.cvtColor(P_im, cv.COLOR_RGB2HSV)
+            blue_mask = cv.inRange(image, blue_lower, blue_upper)
+            if np.sum(blue_mask == 255) > 120000:
+                full_masks.append(blue_mask)
+                white_pixs.append(np.sum(blue_mask == 255))
+                is_playing_.append(False)
+            else:
+                full_masks.append(P_im)
+                white_pixs.append(
+                    '({} {})'.format(np.sum(red_mask == 255), np.sum(blue_mask == 255))
+                )
+                is_playing_.append(True)
+
+    is_playing_players = [
+        is_playing_[2 * idx] & is_playing_[2 * idx + 1] for idx in range(4)
+    ]
+
+    if debug == True:
+        plotMultipleImages(
+            1,
+            4,
+            full_masks,
+            titles=[
+                'P4 {} {}'.format(white_pixs[0], is_playing_[0]),
+                'P3 {} {}'.format(white_pixs[1], is_playing_[1]),
+                'P2 {} {}'.format(white_pixs[2], is_playing_[2]),
+                'P1 {} {}'.format(white_pixs[3], is_playing_[3]),
+            ],
+            cmap=['gray', 'gray', 'gray', 'gray'],
+            figsize=(20, 6),
+            bold_axis=is_playing_,
+            fig_title=fig_title,
+        )
+
+    return is_playing_, is_playing_players
