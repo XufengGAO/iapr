@@ -482,3 +482,45 @@ def extractPlayerCard(
         )
 
     return imgwarps_list
+
+def checkPlaying(
+    img_players: List[np.array],
+    debug: bool = False,
+    fig_title: str = None,
+) -> List[bool]:
+    full_masks = []
+    white_pixs = []
+    is_playing = []
+    for ind, P_im in enumerate(img_players):
+        image = cv.cvtColor(P_im, cv.COLOR_RGB2HSV)
+        red_lower = np.array([144, 24, 0])
+        red_upper = np.array([179, 236, 255])
+        red_mask = cv.inRange(image, red_lower, red_upper)
+        
+        if np.sum(red_mask == 255) > 120000:
+            is_playing.append(False)
+            full_masks.append(red_mask)
+            white_pixs.append(np.sum(red_mask == 255))
+        else:
+            blue_lower = np.array([58, 73, 0])
+            blue_upper = np.array([124, 255, 255])
+            image = cv.cvtColor(P_im, cv.COLOR_RGB2HSV)
+            blue_mask = cv.inRange(image, blue_lower, blue_upper)
+            if np.sum(blue_mask == 255) > 120000:
+                full_masks.append(blue_mask)
+                white_pixs.append(np.sum(blue_mask == 255))
+                is_playing.append(False)
+            else:
+                full_masks.append(P_im)
+                white_pixs.append('({} {})'.format(np.sum(red_mask == 255), np.sum(blue_mask == 255)))
+                is_playing.append(True)
+
+    if debug == True:
+        plotMultipleImages(1, 4, full_masks, ['P4 {} {}'.format(white_pixs[0], is_playing[0]), 'P3 {} {}'.format(white_pixs[1], is_playing[1]),\
+                                            'P2 {} {}'.format(white_pixs[2], is_playing[2]), 'P1 {} {}'.format(white_pixs[3], is_playing[3])],\
+                                            ['gray', 'gray', 'gray', 'gray'], (20, 20))   
+
+    return is_playing
+
+
+
