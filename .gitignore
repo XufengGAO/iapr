@@ -5,6 +5,7 @@
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
 
+.vscode/
 archive/
 data/lab-02-data/
 labs/res/
